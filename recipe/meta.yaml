@@ -1,0 +1,37 @@
+{% set name = "torchaudio" %}
+{% set version = "2.5.1" %}
+{% set torch_version = "2.5.*" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://github.com/pytorch/audio/archive/refs/tags/v2.5.1.tar.gz
+  sha256: 200fbb1234c104a3662b444c0bec2acf4049c4b2113a73c0dc5f4e672cc2a4cc
+
+build:
+  number: 0
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    - cmake
+    - ninja
+  host:
+    - python
+    - pip
+    - pytorch-cpu {{ torch_version }}
+    - ffmpeg <7
+    - libsndfile >=1.2.2
+  run:
+    - python
+    - pytorch-cpu
+    - ffmpeg <7
+    - libsndfile >=1.2.2
+
+test:
+  commands:
+    - python -c "import torchaudio, torch; print('Smoke-test OK:', torchaudio.__version__, torch.__version__)"
