@@ -1,45 +1,13 @@
-@echo On
-setlocal enabledelayedexpansion
+@echo on
 
-if not "%cuda_compiler_version%" == "None" (
-  rem Set the CUDA arch list from
-  rem https://github.com/conda-forge/pytorch-cpu-feedstock/blob/main/recipe/build_pytorch.sh
-  if "%cuda_compiler_version%" == "12.6" (
-    set TORCH_CUDA_ARCH_LIST=5.0;6.0;6.1;7.0;7.5;8.0;8.6;8.9;9.0+PTX
-    rem %CUDA_HOME% not set in CUDA 12.0. Using %PREFIX%
-    set CUDA_TOOLKIT_ROOT_DIR=%PREFIX%
-    rem CUDA_HOME must be set for the build to work in torchaudio
-    set CUDA_HOME=%PREFIX%
-  ) else (
-    echo "unsupported cuda version. edit build.bat"
-    exit /b 1
-  )
+:: The torchaudio CMake scripts fail to find the torch python library on Windows.
+:: We need to set it manually. The path is determined by the conda-build environment.
+set "CMAKE_ARGS=%CMAKE_ARGS% -DTORCH_PYTHON_LIBRARY=%PREFIX%\libs\python%CONDA_PY%.lib"
 
-  set USE_CUDA=1
-  set BUILD_CUDA_CTC_DECODER=1
-) else (
-  set USE_CUDA=0
-  set BUILD_CUDA_CTC_DECODER=0
-)
+:: Run pip install, but add the --no-build-isolation flag
+:: This forces pip to run in the current environment, which allows it to
+:: see the CMAKE_ARGS variable we just set.
+python -m pip install . --no-build-isolation -vv
 
-set USE_ROCM=0
-set USE_OPENMP=1
-set BUILD_CPP_TEST=0
-
-rem sox is buggy
-set BUILD_SOX=0
-
-rem FFMPEG is buggy
-set USE_FFMPEG=0
-rem set FFMPEG_ROOT="${PREFIX}"
-
-rem RNNT loss is buggy
-set BUILD_RNNT=0
-
-set CMAKE_C_COMPILER=%CC%
-set CMAKE_CXX_COMPILER=%CXX%
-set CMAKE_GENERATOR=Ninja
-
-set Torch_ROOT=%SP_DIR%\torch
-
-python -m pip install . -vv
+:: Exit with the same error code as the pip install
+if errorlevel 1 exit 1
